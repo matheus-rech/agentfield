@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.81-rc.1] - 2026-05-08
+
+
+### Fixed
+
+- Fix: align approval request contract with control plane (#524) (#553)
+
+Co-authored-by: Santosh kumar <29346072+santoshkumarradha@users.noreply.github.com>
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com> (746bebe)
+
 ## [0.1.80] - 2026-05-08
 
 ## [0.1.80-rc.1] - 2026-05-08
