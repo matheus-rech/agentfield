@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.81-rc.2] - 2026-05-09
+
+
+### Fixed
+
+- Fix(sdk): poll-driven cross-reasoner pause propagation (#562)
+
+The v0.1.80 listener-based propagation never fired in production because
+it depended on the AsyncExecutionManager's SSE event-stream loop, which is
+gated behind ``enable_event_stream`` (default False) and was not enabled
+on any deployed service. Result: parents waiting on an ``app.call`` that
+hit a hax-sdk human-approval gate kept ticking wallclock, and the parent
+watchdog tripped at exactly the budget despite the visible WAITING state
+(reproduced on Railway run_1778268481826_8c9dd544).
+
+Replace the SSE-listener mechanism with a poll-driven toggle inside
+``wait_for_result``: when the awaited child's status reads as WAITING
+(updated unconditionally by the existing polling task), pause the parent's
+pause-clock; when it reads back as not-WAITING, end the pause. A finally
+block closes any in-flight pause if we exit via terminal/timeout. No SSE
+subscription required, no listener registry, no refcount machinery.
+
+Removes from ``async_execution_manager.py``:
+  - ``register_status_listener`` / ``_status_listeners`` / ``_fire_status_listeners``
+  - the ``execution.waiting`` event-type override (the WAITING-status branch
+    in ``_handle_event_stream_payload`` stays for the case where SSE is on)
+
+Removes from ``agent.py``:
+  - ``_on_child_status_change`` and the ``_waiting_children`` /
+    ``_parent_paused_children`` registries it consumed
+  - the listener registration in ``call()``; the ``pause_clock`` kwarg
+    pass-through (the actual fix) is preserved
+
+Tests: the previous tests poked ``_on_child_status_change`` and
+``_handle_event_stream_payload`` directly, which bypassed the
+``enable_event_stream`` gate and never exercised the production data path.
+The new tests drive the production path: they update ``_executions[id].status``
+the same way the polling task does and assert that ``wait_for_result``
+toggles the parent clock and survives a long WAITING window.
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com> (5bfd1ed)
+
 ## [0.1.81-rc.1] - 2026-05-08
 
 
