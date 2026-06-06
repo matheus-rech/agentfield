@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.90-rc.2] - 2026-06-06
+
+
+### Fixed
+
+- Fix(control-plane): authorize execution note reads(#421) (#630) (04dc06a)
+
 ## [0.1.90-rc.1] - 2026-06-05
 
 
