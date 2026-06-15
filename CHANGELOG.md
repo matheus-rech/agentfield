@@ -6,6 +6,96 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.11] - 2026-06-15
+
+
+### Chores
+
+- Chore(deps): bump the npm_and_yarn group across 2 directories with 4 updates (#670)
+
+Bumps the npm_and_yarn group with 3 updates in the /control-plane/web/client directory: [vite](https://github.com/vitejs/vite/tree/HEAD/packages/vite), [js-yaml](https://github.com/nodeca/js-yaml) and [ws](https://github.com/websockets/ws).
+Bumps the npm_and_yarn group with 3 updates in the /sdk/typescript directory: [vite](https://github.com/vitejs/vite/tree/HEAD/packages/vite), [ws](https://github.com/websockets/ws) and [form-data](https://github.com/form-data/form-data).
+
+
+Updates `vite` from 8.0.5 to 8.0.16
+- [Release notes](https://github.com/vitejs/vite/releases)
+- [Changelog](https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md)
+- [Commits](https://github.com/vitejs/vite/commits/v8.0.16/packages/vite)
+
+Updates `js-yaml` from 4.1.1 to 4.2.0
+- [Changelog](https://github.com/nodeca/js-yaml/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/nodeca/js-yaml/commits)
+
+Updates `ws` from 8.19.0 to 8.20.0
+- [Release notes](https://github.com/websockets/ws/releases)
+- [Commits](https://github.com/websockets/ws/compare/8.19.0...8.20.0)
+
+Updates `vite` from 6.4.2 to 8.0.16
+- [Release notes](https://github.com/vitejs/vite/releases)
+- [Changelog](https://github.com/vitejs/vite/blob/main/packages/vite/CHANGELOG.md)
+- [Commits](https://github.com/vitejs/vite/commits/v8.0.16/packages/vite)
+
+Updates `ws` from 8.20.1 to 8.21.0
+- [Release notes](https://github.com/websockets/ws/releases)
+- [Commits](https://github.com/websockets/ws/compare/8.19.0...8.20.0)
+
+Updates `form-data` from 4.0.5 to 4.0.6
+- [Release notes](https://github.com/form-data/form-data/releases)
+- [Changelog](https://github.com/form-data/form-data/blob/master/CHANGELOG.md)
+- [Commits](https://github.com/form-data/form-data/compare/v4.0.5...v4.0.6)
+
+---
+updated-dependencies:
+- dependency-name: vite
+  dependency-version: 8.0.16
+  dependency-type: direct:development
+  dependency-group: npm_and_yarn
+- dependency-name: js-yaml
+  dependency-version: 4.2.0
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+- dependency-name: ws
+  dependency-version: 8.20.0
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+- dependency-name: vite
+  dependency-version: 8.0.16
+  dependency-type: direct:development
+  dependency-group: npm_and_yarn
+- dependency-name: ws
+  dependency-version: 8.21.0
+  dependency-type: direct:production
+  dependency-group: npm_and_yarn
+- dependency-name: form-data
+  dependency-version: 4.0.6
+  dependency-type: indirect
+  dependency-group: npm_and_yarn
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (ffd0717)
+
+- Chore(deps): bump pyjwt (#669)
+
+Bumps the uv group with 1 update in the /sdk/python directory: [pyjwt](https://github.com/jpadilla/pyjwt).
+
+
+Updates `pyjwt` from 2.12.1 to 2.13.0
+- [Release notes](https://github.com/jpadilla/pyjwt/releases)
+- [Changelog](https://github.com/jpadilla/pyjwt/blob/master/CHANGELOG.rst)
+- [Commits](https://github.com/jpadilla/pyjwt/compare/2.12.1...2.13.0)
+
+---
+updated-dependencies:
+- dependency-name: pyjwt
+  dependency-version: 2.13.0
+  dependency-type: indirect
+  dependency-group: uv
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com> (2cb06f0)
+
 ## [0.1.92-rc.10] - 2026-06-15
 
 
