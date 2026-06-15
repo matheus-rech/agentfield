@@ -270,16 +270,16 @@ func (s *source) Run(ctx context.Context, raw json.RawMessage, secret string, em
 	}
 	client := s.client
 	if client == nil {
-		client = &sqlAPIClient{httpClient: http.DefaultClient}
+		client = &sqlAPIClient{}
 	}
-	var watermark string
+	var cursor pollCursor
 	for {
-		next, err := s.pollOnce(ctx, client, c, secret, watermark, emit)
+		next, err := s.pollOnce(ctx, client, c, secret, cursor, emit)
 		if err != nil && ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if err == nil && next != "" {
-			watermark = next
+		if err == nil && next.Timestamp != "" {
+			cursor = next
 		}
 		timer := time.NewTimer(time.Duration(c.IntervalSeconds) * time.Second)
 		select {
@@ -291,23 +291,28 @@ func (s *source) Run(ctx context.Context, raw json.RawMessage, secret string, em
 	}
 }
 
-func (s *source) pollOnce(ctx context.Context, client *sqlAPIClient, c config, secret, watermark string, emit func(sources.Event)) (string, error) {
-	stmt := buildPollStatement(c, watermark)
+type pollCursor struct {
+	Timestamp string
+	EventID   string
+}
+
+func (s *source) pollOnce(ctx context.Context, client *sqlAPIClient, c config, secret string, cursor pollCursor, emit func(sources.Event)) (pollCursor, error) {
+	stmt := buildPollStatement(c, cursor)
 	res, err := client.Execute(ctx, c, secret, stmt)
 	if err != nil {
-		return watermark, err
+		return cursor, err
 	}
-	events, nextWatermark, err := resultToEvents(c, res)
+	events, nextCursor, err := resultToEvents(c, res)
 	if err != nil {
-		return watermark, err
+		return cursor, err
 	}
 	for _, event := range events {
 		emit(event)
 	}
-	return nextWatermark, nil
+	return nextCursor, nil
 }
 
-func buildPollStatement(c config, watermark string) string {
+func buildPollStatement(c config, cursor pollCursor) string {
 	if c.Mode == modeCustomQueryPoll {
 		return fmt.Sprintf("SELECT * FROM (%s) LIMIT %d", strings.TrimSpace(c.SQL), c.MaxBatchSize)
 	}
@@ -319,14 +324,22 @@ func buildPollStatement(c config, watermark string) string {
 		fmt.Sprintf("TO_VARCHAR(%s, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF9') AS OCCURRED_AT", quoteIdent(c.WatermarkColumn)),
 	}
 	where := ""
-	if watermark != "" {
-		where = fmt.Sprintf(" WHERE %s > TO_TIMESTAMP_NTZ('%s')", quoteIdent(c.WatermarkColumn), strings.ReplaceAll(watermark, "'", "''"))
+	if cursor.Timestamp != "" {
+		watermarkColumn := quoteIdent(c.WatermarkColumn)
+		eventIDColumn := quoteIdent(c.EventIDColumn)
+		timestamp := escapeSQLString(cursor.Timestamp)
+		eventID := escapeSQLString(cursor.EventID)
+		where = fmt.Sprintf(" WHERE (%s > TO_TIMESTAMP_NTZ('%s') OR (%s = TO_TIMESTAMP_NTZ('%s') AND %s > '%s'))", watermarkColumn, timestamp, watermarkColumn, timestamp, eventIDColumn, eventID)
 	}
-	return fmt.Sprintf("SELECT %s FROM %s%s ORDER BY %s LIMIT %d", strings.Join(columns, ", "), table, where, quoteIdent(c.WatermarkColumn), c.MaxBatchSize)
+	return fmt.Sprintf("SELECT %s FROM %s%s ORDER BY %s, %s LIMIT %d", strings.Join(columns, ", "), table, where, quoteIdent(c.WatermarkColumn), quoteIdent(c.EventIDColumn), c.MaxBatchSize)
 }
 
 func quoteIdent(v string) string {
 	return `"` + strings.ReplaceAll(v, `"`, `""`) + `"`
+}
+
+func escapeSQLString(v string) string {
+	return strings.ReplaceAll(v, "'", "''")
 }
 
 type sqlAPIClient struct {
@@ -481,16 +494,16 @@ func (c *sqlAPIClient) pollStatement(ctx context.Context, cfg config, token stri
 	}
 }
 
-func resultToEvents(c config, res statementResponse) ([]sources.Event, string, error) {
+func resultToEvents(c config, res statementResponse) ([]sources.Event, pollCursor, error) {
 	index := columnIndexes(res.ResultSetMeta.RowType)
 	required := []string{"EVENT_ID", "EVENT_TYPE", "PAYLOAD", "OCCURRED_AT"}
 	for _, name := range required {
 		if _, ok := index[name]; !ok {
-			return nil, "", fmt.Errorf("snowflake: result missing %s column", name)
+			return nil, pollCursor{}, fmt.Errorf("snowflake: result missing %s column", name)
 		}
 	}
 	events := make([]sources.Event, 0, len(res.Data))
-	var nextWatermark string
+	var nextCursor pollCursor
 	for _, row := range res.Data {
 		eventID := valueString(row[index["EVENT_ID"]])
 		eventType := valueString(row[index["EVENT_TYPE"]])
@@ -510,7 +523,7 @@ func resultToEvents(c config, res statementResponse) ([]sources.Event, string, e
 			},
 		})
 		if err != nil {
-			return nil, "", err
+			return nil, pollCursor{}, err
 		}
 		raw, _ := json.Marshal(map[string]any{
 			"event_id": eventID,
@@ -523,10 +536,10 @@ func resultToEvents(c config, res statementResponse) ([]sources.Event, string, e
 			Normalized:     normalized,
 		})
 		if occurredAt != "" {
-			nextWatermark = occurredAt
+			nextCursor = pollCursor{Timestamp: occurredAt, EventID: eventID}
 		}
 	}
-	return events, nextWatermark, nil
+	return events, nextCursor, nil
 }
 
 func columnIndexes(cols []columnMeta) map[string]int {

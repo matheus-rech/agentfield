@@ -222,6 +222,48 @@ func TestSnowflakeAccountTransportRewritesHost(t *testing.T) {
 	}
 }
 
+func TestRunDefaultClientUsesValidatedAccountHost(t *testing.T) {
+	originalTransport := http.DefaultTransport
+	defer func() { http.DefaultTransport = originalTransport }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var gotHost string
+	http.DefaultTransport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		gotHost = req.URL.Host
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(strings.NewReader(`{
+				"statementHandle":"run-default",
+				"resultSetMetaData":{"rowType":[
+					{"name":"EVENT_ID"},
+					{"name":"EVENT_TYPE"},
+					{"name":"PAYLOAD"},
+					{"name":"OCCURRED_AT"}
+				]},
+				"data":[["evt_1","snowflake.default","{}", "2026-06-11T10:00:00.000"]]
+			}`)),
+			Header: make(http.Header),
+		}, nil
+	})
+
+	err := (&source{}).Run(ctx, json.RawMessage(`{
+		"account_url":"https://acct.snowflakecomputing.com",
+		"database":"OBSERVABILITY",
+		"schema":"AGENTFIELD",
+		"table":"AGENTFIELD_EVENTS",
+		"interval_seconds":5
+	}`), "pat", func(sources.Event) {
+		cancel()
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run error = %v, want context.Canceled", err)
+	}
+	if gotHost != "acct.snowflakecomputing.com" {
+		t.Fatalf("default Run request host = %q", gotHost)
+	}
+}
+
 func TestPollOnceCallsSnowflakeSQLAPIAndEmitsEvents(t *testing.T) {
 	var gotAuth string
 	var gotTokenType string
@@ -267,7 +309,7 @@ func TestPollOnceCallsSnowflakeSQLAPIAndEmitsEvents(t *testing.T) {
 	}
 
 	var emitted []sources.Event
-	next, err := (&source{}).pollOnce(context.Background(), &sqlAPIClient{httpClient: snowflakeTestHTTPClient(t, server)}, cfg, "pat-secret", "", func(e sources.Event) {
+	next, err := (&source{}).pollOnce(context.Background(), &sqlAPIClient{httpClient: snowflakeTestHTTPClient(t, server)}, cfg, "pat-secret", pollCursor{}, func(e sources.Event) {
 		emitted = append(emitted, e)
 	})
 	if err != nil {
@@ -285,8 +327,8 @@ func TestPollOnceCallsSnowflakeSQLAPIAndEmitsEvents(t *testing.T) {
 	if !strings.Contains(gotStatement, `TO_VARCHAR("OCCURRED_AT", 'YYYY-MM-DD"T"HH24:MI:SS.FF9') AS OCCURRED_AT`) {
 		t.Fatalf("statement did not normalize watermark column: %s", gotStatement)
 	}
-	if next == "" {
-		t.Fatal("expected watermark")
+	if next.Timestamp == "" || next.EventID == "" {
+		t.Fatal("expected cursor")
 	}
 	if len(emitted) != 1 {
 		t.Fatalf("emitted %d events, want 1", len(emitted))
@@ -304,7 +346,7 @@ func TestPollOnceCallsSnowflakeSQLAPIAndEmitsEvents(t *testing.T) {
 	}
 }
 
-func TestBuildPollStatementUsesTimestampWatermark(t *testing.T) {
+func TestBuildPollStatementUsesCompositeCursor(t *testing.T) {
 	cfg := config{
 		Mode:            modeEventTablePoll,
 		Database:        "OBSERVABILITY",
@@ -317,9 +359,12 @@ func TestBuildPollStatementUsesTimestampWatermark(t *testing.T) {
 		MaxBatchSize:    100,
 	}
 
-	stmt := buildPollStatement(cfg, "2026-06-11T18:52:00.123456789")
-	if !strings.Contains(stmt, `WHERE "OCCURRED_AT" > TO_TIMESTAMP_NTZ('2026-06-11T18:52:00.123456789')`) {
-		t.Fatalf("statement did not use timestamp watermark predicate: %s", stmt)
+	stmt := buildPollStatement(cfg, pollCursor{Timestamp: "2026-06-11T18:52:00.123456789", EventID: "evt_42"})
+	if !strings.Contains(stmt, `WHERE ("OCCURRED_AT" > TO_TIMESTAMP_NTZ('2026-06-11T18:52:00.123456789') OR ("OCCURRED_AT" = TO_TIMESTAMP_NTZ('2026-06-11T18:52:00.123456789') AND "EVENT_ID" > 'evt_42'))`) {
+		t.Fatalf("statement did not use composite cursor predicate: %s", stmt)
+	}
+	if !strings.Contains(stmt, `ORDER BY "OCCURRED_AT", "EVENT_ID"`) {
+		t.Fatalf("statement did not order by timestamp and event id: %s", stmt)
 	}
 }
 
@@ -328,7 +373,7 @@ func TestBuildPollStatementCustomQueryAndEscapedWatermark(t *testing.T) {
 		Mode:         modeCustomQueryPoll,
 		SQL:          " SELECT * FROM EVENTS ",
 		MaxBatchSize: 25,
-	}, "")
+	}, pollCursor{})
 	if custom != "SELECT * FROM (SELECT * FROM EVENTS) LIMIT 25" {
 		t.Fatalf("custom statement = %s", custom)
 	}
@@ -344,9 +389,12 @@ func TestBuildPollStatementCustomQueryAndEscapedWatermark(t *testing.T) {
 		WatermarkColumn: "OCCURRED_AT",
 		MaxBatchSize:    5,
 	}
-	stmt := buildPollStatement(cfg, "2026-06-11T10:00:00'Z")
+	stmt := buildPollStatement(cfg, pollCursor{Timestamp: "2026-06-11T10:00:00'Z", EventID: "evt'1"})
 	if !strings.Contains(stmt, "2026-06-11T10:00:00''Z") {
 		t.Fatalf("statement did not escape watermark: %s", stmt)
+	}
+	if !strings.Contains(stmt, "evt''1") {
+		t.Fatalf("statement did not escape event id: %s", stmt)
 	}
 }
 
@@ -503,7 +551,7 @@ func TestResultToEventsNormalizesValueTypes(t *testing.T) {
 			{map[string]string{"id": "nested"}, "snowflake.object", map[string]any{"ok": true}, "2026-06-11T18:00:00Z"},
 		},
 	}
-	events, watermark, err := resultToEvents(config{AccountURL: "https://acct", Database: "DB", Schema: "S", Table: "T"}, res)
+	events, cursor, err := resultToEvents(config{AccountURL: "https://acct", Database: "DB", Schema: "S", Table: "T"}, res)
 	if err != nil {
 		t.Fatalf("resultToEvents: %v", err)
 	}
@@ -516,8 +564,8 @@ func TestResultToEventsNormalizesValueTypes(t *testing.T) {
 	if events[1].IdempotencyKey != `{"id":"nested"}` {
 		t.Fatalf("object id was not JSON stringified: %+v", events[1])
 	}
-	if watermark != "2026-06-11T18:00:00Z" {
-		t.Fatalf("watermark = %q", watermark)
+	if cursor.Timestamp != "2026-06-11T18:00:00Z" || cursor.EventID != `{"id":"nested"}` {
+		t.Fatalf("cursor = %+v", cursor)
 	}
 }
 
