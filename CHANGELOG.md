@@ -6,6 +6,54 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.8] - 2026-06-15
+
+
+### Other
+
+- Add AgentField realtime sessions for WebRTC voice ingress (#654)
+
+* Add explicit realtime session DX
+
+* fix: align session route wildcards
+
+* test: cover session control-plane paths
+
+* docs(examples): add voice dictation example for realtime sessions
+
+Runnable demo of the @app.session WebRTC voice flow: browser mic ->
+control-plane SDP proxy -> OpenAI Realtime, with live transcription and
+the tools=[...] allowlist routing through execute/async. Includes WSL
+setup notes and the GA session.update shape (session.type + audio.input
+nesting) required for input transcription + server VAD.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* Add session access tags and UI surfaces (#655)
+
+* Add session access tags and UI surfaces
+
+* test: update session access UI expectations
+
+* test: align session access CLI coverage
+
+* test: cover session playground tools
+
+* test: cover session access UI paths
+
+* fix(examples): make voice dictation example resilient to the session route rename
+
+#655 renamed the realtime-offer route (/sessions -> /session-instances). The
+page now tries the /session-instances route first and falls back to /sessions,
+so it works against #654 alone and against #654+#655.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (e776f3f)
+
 ## [0.1.92-rc.7] - 2026-06-15
 
 
