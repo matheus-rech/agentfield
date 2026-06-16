@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.92-rc.13] - 2026-06-16
+
+
+### Fixed
+
+- Fix: Fixed the stale `_current_status` issue where status stuck on `STARTING` mode. (#673) (6a7ce08)
+
 ## [0.1.92-rc.12] - 2026-06-15
 
 
