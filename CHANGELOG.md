@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.96-rc.1] - 2026-06-29
+
+
+### Added
+
+- Feat(sdk): ReasonerFailed exception so a reasoner can report failure with result (#697)
+
+The async execution handler records an execution as `succeeded` whenever the
+reasoner returns a value — it never inspects the result. A reasoner whose own
+payload says `success: False` (e.g. a build that completed zero issues and
+merged nothing) therefore surfaces as green, which is easy to act on
+incorrectly.
+
+Add `ReasonerFailed`, raised inside a reasoner to report that the work ran but
+failed. The handler maps it to `status="failed"` while still posting the
+structured `result`, so the control plane (which stores the result payload
+regardless of terminal status) keeps the rich outcome — debt, DAG state, any
+PR opened — instead of just a bare error string. error_details is carried
+through the existing generic path.
+
+Refs Agent-Field/SWE-AF#82 (Gap 2, SDK half).
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (491460d)
+
 ## [0.1.95] - 2026-06-27
 
 ## [0.1.95-rc.3] - 2026-06-27
