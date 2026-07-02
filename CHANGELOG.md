@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.97-rc.1] - 2026-07-02
+
+
+### Added
+
+- Feat(skill): generative orchestration theory for the agentfield skill (#708)
+
+* feat(skill): add mental-models layer to agentfield skill
+
+* feat(skill): rework thinking layer into generative orchestration theory
+
+The skill taught rules and a pattern vocabulary; an agent reading it could
+imitate reference builds but not derive an orchestration for a problem that
+looks like neither security auditing nor contract review. Patterns are
+outputs of thinking, not inputs.
+
+- mental-models.md: rewritten as the full generative theory — cognitive-job
+  decomposition, autonomy spectrum, seven-rung verification ladder,
+  six-rung dynamism ladder, quality escalation ladder, code-for-certainty +
+  archei data-flow rule; one invoice-intake example threads through it
+- SKILL.md: 'How to think' is now the five-step derivation procedure; the
+  five principles are reframed as consequences and a review checklist;
+  pattern-first design added to hard rejections (+18 lines vs main)
+- patterns-emerge.md: reframed as post-hoc naming; every named pattern
+  carries a derivation line from the ladders (HUNT->PROVE = rung 6 on a
+  parallel discovery layer, etc.)
+- anti-patterns.md: rejections that follow from the theory (rung below/above
+  the stakes, unjustified dynamism, pattern-first design, model-size-first)
+- verification.md and templates: 'verification ladder' now names the output
+  ladder; build proof renamed to build checks; stale 'five principles'
+  pointers updated
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+* chore(skill): bump agentfield skill to v0.5.0 and sync embedded copy
+
+The thinking-layer rework edited skills/agentfield/ (source of truth)
+but the binary embeds skill_data/agentfield/. Sync the mirror (adds
+mental-models.md, updates SKILL.md and references) and bump the catalog
+version 0.4.0 -> 0.5.0 so existing installs pick up the change on
+af skill install/update instead of being skipped as already-current.
+
+---------
+
+Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com> (76fdf5e)
+
+
+
+### Documentation
+
+- Docs: credit integrations packs in comparison table (linked partial mark) (a709524)
+
+- Docs: sharpen vs-frameworks pitch (concede row, plain-words rows, second-caller rule) (2ea7c67)
+
+- Docs: scale-first README rewrite (fan-out hero sample, how-it-scales section, tutorial blog cards) (859174f)
+
 ## [0.1.96] - 2026-06-29
 
 ## [0.1.96-rc.1] - 2026-06-29
