@@ -203,7 +203,7 @@ Most agent tools help you **write** agent logic. AgentField is what **runs** it 
 |  | **Frameworks**<br><sub>LangChain · CrewAI · PydanticAI · OpenAI Agents SDK</sub> | **Workflow engines**<br><sub>Temporal · Airflow</sub> | **Visual builders**<br><sub>n8n · Zapier</sub> | **AgentField** |
 |---|:-:|:-:|:-:|:-:|
 | Build agent logic (prompts, tools, structured output) | ● | — | — | ● |
-| Prebuilt chains, retrievers, integrations | ● | — | ◐ | — |
+| Prebuilt chains, retrievers, integrations | ● | — | ◐ | [◐](https://agentfield.ai/docs/integrations?utm_source=github-readme&utm_campaign=github-readme&utm_id=github-readme-integrations) |
 | Production REST APIs out of the box | — | ◐ | ● | ● |
 | Async + retries + webhooks | — | ● | ◐ | **●** |
 | Memory scopes (global · agent · session · run) | ◐ | — | — | ● |
