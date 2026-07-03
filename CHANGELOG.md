@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.97-rc.5] - 2026-07-03
+
+
+### Fixed
+
+- Fix(control-plane): prevent structured logs from leaking execution payloads (#701)
+
+* fix(control-plane): prevent structured logs from leaking execution payloads (#560)
+
+Add logging configuration (level + redact_payloads) to control what
+execution data appears in structured log events and the internal event bus.
+
+Changes:
+- Add LoggingConfig with 'level' and 'redact_payloads' options
+- Support AGENTFIELD_LOG_LEVEL and AGENTFIELD_LOG_REDACT_PAYLOADS env vars
+- Guard execution input/output/context in event publishing behind redaction flag
+- Default to redact_payloads=true (safe) — opt-in via config to see full payloads
+- Replace 32 log.Printf calls in storage layer with leveled logger.Logger calls
+- Add InitLoggerWithLevel() for string-based log level configuration
+- Re-initialize logger from config at server startup
+
+Closes #560
+
+* fix: address Copilot review comments
+
+- Guard req.Result behind redactPayloads in handleStatusUpdate event data
+- Remove raw data preview from corrupted JSON warning log (log only metadata: context + length)
+
+* test(control-plane): cover payload redaction branches for patch-coverage gate (#701)
+
+The structured-log payload redaction added in #701 gated execution
+input/result/context data behind `redactPayloads`. Those branches were only
+exercised on their redact-enabled default, leaving the opt-out paths uncovered
+and dropping control-plane patch coverage below the 80% floor.
+
+Adds behavior tests that subscribe to the execution event bus and assert the
+observable contract: input/result/context payloads are omitted from published
+events when redaction is enabled (the safe default) and present only when an
+operator explicitly disables it. Covers completeExecution, failExecution,
+completeReplayHit, handleStatusUpdate, and the event-context path.
+
+Patch coverage on touched lines: 68% -> 93%. Additive only; does not weaken the
+redaction logic.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Abir Abbas <abirabbas1998@gmail.com>
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (841459b)
+
 ## [0.1.97-rc.4] - 2026-07-03
 
 
