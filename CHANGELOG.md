@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.104-rc.1] - 2026-07-07
+
+
+### Fixed
+
+- Fix(control-plane): correct observability-webhook paths in KB + API catalog (#735)
+
+The embedded Knowledge Base article ("observability/webhooks") and the
+machine-readable API catalog both advertised
+`GET/POST/DELETE /api/v1/settings/webhooks`, which is not a registered
+route and 404s on the server (the Smart404 handler confirms
+"/api/v1/settings/webhooks does not exist"). The real endpoint is the
+singleton `GET/POST/DELETE /api/v1/settings/observability-webhook`
+(plus `/status`, `/redrive`, `/dlq`), registered in
+registerObservabilityRoutes.
+
+Both surfaces are served to users/agents (public KB article endpoint and
+the /discover + .well-known/ai-catalog.json catalog), so the wrong paths
+were externally visible.
+
+Changes:
+- KB article: repoint to the real observability-webhook endpoints, note
+  the config is a singleton (POST upserts, no :id), document the
+  `X-AgentField-Signature: sha256=<hex>` HMAC signing (when a secret is
+  set) and the lifecycle events it fires on, and clarify that this
+  outbound observability webhook is distinct from the inbound,
+  HMAC-signed approval webhook (POST /api/v1/webhooks/approval-response).
+- API catalog: replace the three dead `/settings/webhooks` entries with
+  the seven real `/settings/observability-webhook*` endpoints.
+
+Verified live: all documented paths now resolve (200), the dead path is
+gone from the served KB, and the corrected KB/catalog match the router.
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (06f9110)
+
 ## [0.1.103] - 2026-07-07
 
 ## [0.1.103-rc.1] - 2026-07-07
