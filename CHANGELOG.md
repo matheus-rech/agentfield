@@ -6,6 +6,65 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 <!-- changelog:entries -->
 
+## [0.1.102-rc.3] - 2026-07-07
+
+
+### Added
+
+- Feat(install): version the agentfield-package.yaml manifest schema (config_version) (#733)
+
+* feat(install): version the agentfield-package.yaml manifest schema
+
+Add a config_version field to the agent-node manifest so the control plane
+can read it as the format evolves without locking authors into whatever
+shape shipped the day they wrote it. It is distinct from the node's own
+version: (release semver); config_version is the schema version.
+
+ParsePackageMetadata now does a version-dependent read: an absent value is
+v0 (the legacy, pre-versioning format, read leniently), the current version
+is v1, and a manifest declaring a version newer than CurrentConfigVersion is
+refused with an "upgrade AgentField" error rather than silently mis-parsed.
+The "v" prefix is optional/case-insensitive; malformed values fail loudly.
+
+Bump policy: config_version bumps only for BREAKING format changes (a field
+renamed/removed or its shape changed). Additive optional fields (e.g. the
+existing require_one_of) do not bump it.
+
+Tests:
+- config_version_test.go: parse/normalize + future-version and malformed
+  rejection + additive-field tolerance.
+- config_version_fixtures_test.go: one canonical golden manifest + structure
+  assertion per schema version, with a coverage guard that fails if a version
+  has no fixture (or the highest fixture and CurrentConfigVersion drift) —
+  the executable spec that forces "net-new version -> net-new fixture, never
+  rewrite old fixtures" for future maintainers.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs(install): document the config_version manifest schema version
+
+Explain config_version in the agent-node install guide and the coding-agent
+CLI reference: what it is (schema version, distinct from the node's release
+version:), that absent means v0, that v1 is current, and the bump policy
+(breaking changes only — additive fields don't bump). Add a version table and
+link Agent-Field/SWE-AF's manifest as a real example to copy from. Mirror the
+CLI-reference change into the embedded skill_data copy.
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+* docs(agents): note the manifest config_version contract for coding agents
+
+Tell agents authoring/reading agentfield-package.yaml about config_version:
+the single reader (packages.ParsePackageMetadata), the bump policy, and that
+the golden-fixture suite is the spec they must maintain (grow the current
+fixture for additive fields; add a net-new fixture for a net-new version).
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+
+---------
+
+Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com> (315f732)
+
 ## [0.1.102-rc.2] - 2026-07-07
 
 
